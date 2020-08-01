@@ -66,7 +66,6 @@ app.use('/api/categories', categoriesApiRouter);
 app.use('/api/products', productsApiRouter);
 
 
-// ************ DON'T TOUCH FROM HERE ************
 // ************ catch 404 and forward to error handler ************
 app.use(function(req, res, next) {
   next(createError(404));
