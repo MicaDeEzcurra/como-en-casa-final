@@ -9,6 +9,6 @@ Sequelize
 
 Pending:
 - React
-- Location
+- Location (google maps api)
 
 
