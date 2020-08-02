@@ -1,141 +1,145 @@
-const {body} = require('express-validator');
-const bcrypt = require('bcryptjs');
-const { User, Product } = require('../database/models');
-const path = require('path');
+const { body } = require("express-validator");
+const bcrypt = require("bcryptjs");
+const { User, Product } = require("../database/models");
+const path = require("path");
 
- module.exports = {
-    register:[
+module.exports = {
+	register: [
+		body("name")
+			.notEmpty()
+			.withMessage("El campo nombre es obligatorio")
+			.bail()
+			.custom((value) => {
+				return User.findOne({
+					where: {
+						name: value,
+					},
+				}).then((user) => {
+					if (user) {
+						return Promise.reject("Usuario registrado");
+					}
+				});
+			}),
 
-        //nombre
-        body('name')
-        .notEmpty().withMessage('El campo nombre es obligatorio').bail()
-        .custom(value => {
-            return User.findOne({
-                     where: {
-                    name: value
-                }
-            })
-                .then(user =>{
-                    if (user){
-                        return Promise.reject('Usuario registrado')
-                    }
-                })
+		body("email")
+			.notEmpty()
+			.withMessage("Este campo es obligatorio")
+			.bail()
+			.isEmail()
+			.withMessage("Debes colocar un email válido")
+			.bail()
+			.custom((value) => {
+				return User.findOne({
+					where: {
+						email: value,
+					},
+				}).then((user) => {
+					if (user) {
+						return Promise.reject("Email registrado");
+					}
+				});
+			}),
 
-        } ),
+		body("password")
+			.notEmpty()
+			.withMessage("El campo contraseña es obligatorio")
+			.bail()
+			.isLength({ min: 6 })
+			.withMessage("Debe tener al menos 6 caracteres")
+			.bail()
+			.custom((value, { req }) => {
+				return value == req.body.retype;
+			})
+			.withMessage("Las contraseñas no coinciden"),
 
-        //email
-         body('email')
-          .notEmpty().withMessage('Este campo es obligatorio').bail()
-         .isEmail().withMessage('Debes colocar un email válido').bail() 
-             .custom(value =>{
-                 return User.findOne({
+		//retype password
+		body("retype")
+			.notEmpty()
+			.withMessage("El campo repetir contraseña es obligatorio"),
+	],
 
-                     where: {
-                         email : value
-                     }
-                 })
-                     .then(user => {
-                         if (user) {
-                             return Promise.reject('Email registrado')
-                         }
-                     })
-        }),
-           
-            //password
-         body('password')
-            .notEmpty().withMessage('El campo contraseña es obligatorio').bail()
-               .isLength({min:6}).withMessage('Debe tener al menos 6 caracteres').bail()
-               .custom((value, { req }) => {
-                //    if(value != req.body.retype){
-                //     return false
-                //    }
+	login: [
+		body("email")
+			.notEmpty()
+			.withMessage("Este campo es obligatorio")
+			.bail()
+			.isEmail()
+			.withMessage("Debes colocar un email válido")
+			.bail()
+			.custom((value, { req }) => {
+				return User.findOne({
+					where: {
+						email: value,
+					},
+				}).then((user) => {
+					if (user) {
+						if (
+							bcrypt.compareSync(req.body.password, user.password)
+						) {
+							return true;
+						} else {
+							return Promise.reject(
+								"La contraseña y el email no coinciden"
+							);
+						}
+					} else {
+						return Promise.reject(
+							"La contraseña y el email no coinciden"
+						);
+					}
+				});
+			}),
+	],
 
-                return value == req.body.retype;
+	creacion: [
+		body("name").notEmpty().withMessage("El campo nombre es obligatorio"),
 
-               }).withMessage('Las contraseñas no coinciden'),
+		body("price")
+			.notEmpty()
+			.withMessage("El campo precio es obligatorio")
+			.bail()
+			.isInt()
+			.withMessage("Debes colocar un número valido"),
 
-             //retype password
-              body('retype')
-              .notEmpty().withMessage('El campo repetir contraseña es obligatorio')
+		body("category")
+			.custom((value, { req }) => req.body.idCategory)
+			.withMessage("Debes ingresar una categoría"),
 
-     ],
+		body("img")
+			.custom((value, { req }) => req.file)
+			.withMessage("Debes ingresar una imagen")
+			.bail()
+			.custom((value, { req }) => {
+				const acceptedExtensions = [".jpg", ".jpeg", ".png"];
+				const ext = path.extname(req.file.originalname);
+				return acceptedExtensions.includes(ext);
+			})
+			.withMessage("Debe tener una extensión válida."),
+	],
 
-    login:[
-        body('email')
-        .notEmpty().withMessage('Este campo es obligatorio').bail()
-        .isEmail().withMessage('Debes colocar un email válido').bail() 
-        .custom((value, {req}) => {
-            return User.findOne({
-                where: {
-                    email: value
-                }
-            })
-                .then(user => {
-                    if (user) {
-                        if (bcrypt.compareSync(req.body.password, user.password)){
-                            return true;
-                        } else {
-                            return Promise.reject('La contraseña y el email no coinciden')
-                        }
+	edicion: [
+		body("name").notEmpty().withMessage("El campo nombre es obligatorio"),
 
+		body("price")
+			.notEmpty()
+			.withMessage("El campo precio es obligatorio")
+			.bail()
+			.isInt()
+			.withMessage("Debes colocar un número valido"),
 
-                    } else {
-                        return Promise.reject('La contraseña y el email no coinciden')
-                    }
-                })
-        }),
-    ],
+		body("category")
+			.custom((value, { req }) => req.body.idCategory)
+			.withMessage("Debes ingresar una categoría"),
 
-     creacion: [
-
-         //nombre
-         body('name')
-             .notEmpty().withMessage('El campo nombre es obligatorio'),
-
-         // price
-         body('price')
-             .notEmpty().withMessage('El campo precio es obligatorio').bail()
-             .isInt().withMessage('Debes colocar un número valido'),
-
-         // category
-           body('category')
-                 .custom((value, { req }) => req.body.idCategory).withMessage('Debes ingresar una categoría'),
-
-         // image
-         body('img')
-             .custom((value, { req }) => req.file).withMessage('Debes ingresar una imagen').bail()
-             .custom((value, { req }) => {
-                 const acceptedExtensions = ['.jpg', '.jpeg', '.png'];
-                 const ext = path.extname(req.file.originalname);
-                 return acceptedExtensions.includes(ext);
-             }).withMessage('Debe tener una extensión válida.')
-     ],
-
-     edicion: [
-
-         //nombre
-         body('name')
-             .notEmpty().withMessage('El campo nombre es obligatorio'),
-
-         // price
-         body('price')
-             .notEmpty().withMessage('El campo precio es obligatorio').bail()
-             .isInt().withMessage('Debes colocar un número valido'),
-
-         // category
-         body('category')
-             .custom((value, { req }) => req.body.idCategory).withMessage('Debes ingresar una categoría'),
-
-         // image
-         body('img')
-             .custom((value, { req }) => {
-                 if(req.file){
-                     const acceptedExtensions = ['.jpg', '.jpeg', '.png'];
-                     const ext = path.extname(req.file.originalname);
-                     return acceptedExtensions.includes(ext);
-                 }
-                 return true;
-             }).withMessage('Debe tener una extensión válida.')
-     ]
-}
-
+		body("img")
+			.custom((value, { req }) => {
+				if (req.file) {
+					const acceptedExtensions = [".jpg", ".jpeg", ".png"];
+					const ext = path.extname(req.file.originalname);
+					return acceptedExtensions.includes(ext);
+				}
+				return true;
+			})
+			.withMessage("Debe tener una extensión válida."),
+	],
+};

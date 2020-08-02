@@ -1,40 +1,38 @@
-//middleware a nivel apliacion!
-//este middleware va a chequear si tengo los datos de la session almacenados en la variable locals.
-const {User} = require('../database/models')
+// App middleware
+// Middleware will check if data from sessions is stored in variable locals
+const { User } = require("../database/models");
 
 function log(req, res, next) {
-  //session
-  res.locals.user = false;
-  if (req.session.user) {
-    //quiero que todas mis vistas tengan la info de session del usuario, entonces creo la variable locals (viene con el pack session), donde voy a almacenar esta info. la variable locals, me permite acceder a esta info desde la vista
-    res.locals.user = req.session.user;
-    return next();
+	//session
+	res.locals.user = false;
+	if (req.session.user) {
+		// I want all my views to have user session data, so I created variable locals (comes with package session), and stored user session data in it.
+		// Variable locals allows me to acces this data from views
+		res.locals.user = req.session.user;
+		return next();
 
-    //cookies
-  } else if (req.cookies.email) {
-   
-   User.findOne({
-      where: {
-        email: req.cookies.email,
-      },
-    }).then(function (user) {
-      //si el usuario existe en la DB:
-      if (user) {
-      delete user.password;
-      req.session.user = user;
-      res.locals.user = user;
-      }
-      return next(); 
-
-    })
-    .catch(function (err) {
-      // print the error details
-      console.log(err);
-    });
-
-   } else {
-      return next();
-   }
+		//cookies
+	} else if (req.cookies.email) {
+		User.findOne({
+			where: {
+				email: req.cookies.email,
+			},
+		})
+			.then(function (user) {
+				if (user) {
+					delete user.password;
+					req.session.user = user;
+					res.locals.user = user;
+				}
+				return next();
+			})
+			.catch(function (err) {
+				// print error details
+				console.log(err);
+			});
+	} else {
+		return next();
+	}
 }
 
 module.exports = log;
